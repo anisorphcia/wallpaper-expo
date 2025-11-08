@@ -1,98 +1,209 @@
 import { Image } from 'expo-image';
-import { Platform, StyleSheet } from 'react-native';
+import { router } from 'expo-router';
+import { useEffect, useState } from 'react';
+import { ActivityIndicator, FlatList, StyleSheet, TouchableOpacity } from 'react-native';
 
-import { HelloWave } from '@/components/hello-wave';
-import ParallaxScrollView from '@/components/parallax-scroll-view';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
-import { Link } from 'expo-router';
+import { categoryApi } from '@/constants/endpoints';
+import type { Category } from '@/constants/types';
 
 export default function HomeScreen() {
-  return (
-    <ParallaxScrollView
-      headerBackgroundColor={{ light: '#A1CEDC', dark: '#1D3D47' }}
-      headerImage={
-        <Image
-          source={require('@/assets/images/partial-react-logo.png')}
-          style={styles.reactLogo}
-        />
-      }>
-      <ThemedView style={styles.titleContainer}>
-        <ThemedText type="title">Welcome!</ThemedText>
-        <HelloWave />
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 1: Try it</ThemedText>
-        <ThemedText>
-          Edit <ThemedText type="defaultSemiBold">app/(tabs)/index.tsx</ThemedText> to see changes.
-          Press{' '}
-          <ThemedText type="defaultSemiBold">
-            {Platform.select({
-              ios: 'cmd + d',
-              android: 'cmd + m',
-              web: 'F12',
-            })}
-          </ThemedText>{' '}
-          to open developer tools.
-        </ThemedText>
-      </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <Link href="/modal">
-          <Link.Trigger>
-            <ThemedText type="subtitle">Step 2: Explore</ThemedText>
-          </Link.Trigger>
-          <Link.Preview />
-          <Link.Menu>
-            <Link.MenuAction title="Action" icon="cube" onPress={() => alert('Action pressed')} />
-            <Link.MenuAction
-              title="Share"
-              icon="square.and.arrow.up"
-              onPress={() => alert('Share pressed')}
-            />
-            <Link.Menu title="More" icon="ellipsis">
-              <Link.MenuAction
-                title="Delete"
-                icon="trash"
-                destructive
-                onPress={() => alert('Delete pressed')}
-              />
-            </Link.Menu>
-          </Link.Menu>
-        </Link>
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        <ThemedText>
-          {`Tap the Explore tab to learn more about what's included in this starter app.`}
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    try {
+      setLoading(true);
+      setError(null);
+
+      const response = await categoryApi.getCategories();
+      setCategories(response.data.res.category);
+    } catch (err) {
+      setError('获取分类失败，请检查网络连接');
+      console.error('获取分类失败:', err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCategoryPress = (category: Category) => {
+    console.log('点击分类:', category.name);
+    console.log('分类ID:', category.id);
+    console.log('导航路径:', `/category/${category.id}`);
+
+    try {
+      router.push(`/category/${category.id}`);
+      console.log('导航调用成功');
+    } catch (error) {
+      console.error('导航失败:', error);
+    }
+  };
+
+  const renderCategoryItem = ({ item }: { item: Category }) => (
+    <TouchableOpacity
+      style={styles.categoryItem}
+      onPress={() => handleCategoryPress(item)}
+      activeOpacity={0.7}
+    >
+      <Image
+        source={{ uri: item.cover }}
+        style={styles.categoryImage}
+        contentFit="cover"
+      />
+      <ThemedView style={styles.categoryInfo}>
+        {/* <ThemedText type="subtitle" style={styles.categoryName}>
+          {item.name}
+        </ThemedText> */}
+        <ThemedText style={styles.categoryEname}>
+          {item.ename}
+        </ThemedText>
+        <ThemedText style={styles.categoryCount}>
+          {item.count?.toLocaleString() || '0'} 张图片
         </ThemedText>
       </ThemedView>
-      <ThemedView style={styles.stepContainer}>
-        <ThemedText type="subtitle">Step 3: Get a fresh start</ThemedText>
-        <ThemedText>
-          {`When you're ready, run `}
-          <ThemedText type="defaultSemiBold">npm run reset-project</ThemedText> to get a fresh{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> directory. This will move the current{' '}
-          <ThemedText type="defaultSemiBold">app</ThemedText> to{' '}
-          <ThemedText type="defaultSemiBold">app-example</ThemedText>.
-        </ThemedText>
+    </TouchableOpacity>
+  );
+
+  if (loading) {
+    return (
+      <ThemedView style={styles.loadingContainer}>
+        <ActivityIndicator size="large" />
+        <ThemedText style={styles.loadingText}>加载分类中...</ThemedText>
       </ThemedView>
-    </ParallaxScrollView>
+    );
+  }
+
+  if (error) {
+    return (
+      <ThemedView style={styles.errorContainer}>
+        <ThemedText style={styles.errorText}>{error}</ThemedText>
+        <TouchableOpacity style={styles.retryButton} onPress={fetchCategories}>
+          <ThemedText style={styles.retryButtonText}>重试</ThemedText>
+        </TouchableOpacity>
+      </ThemedView>
+    );
+  }
+
+  return (
+    <ThemedView style={styles.container}>
+      <ThemedView style={styles.header}>
+      </ThemedView>
+
+      <FlatList
+        data={categories}
+        renderItem={renderCategoryItem}
+        keyExtractor={(item) => item.id}
+        numColumns={2}
+        columnWrapperStyle={styles.categoryRow}
+        contentContainerStyle={styles.categoryList}
+        showsVerticalScrollIndicator={false}
+      />
+    </ThemedView>
   );
 }
 
 const styles = StyleSheet.create({
-  titleContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
   },
-  stepContainer: {
-    gap: 8,
-    marginBottom: 8,
+  header: {
+    paddingTop: 30,
   },
-  reactLogo: {
-    height: 178,
-    width: 290,
+  subtitle: {
+    marginTop: 8,
+    opacity: 0.7,
+  },
+  categoryList: {
+    padding: 10,
+  },
+  categoryRow: {
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  categoryItem: {
+    flex: 1,
+    marginHorizontal: 5,
+    backgroundColor: '#fff',
+    borderRadius: 12,
+    overflow: 'hidden',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  categoryImage: {
+    width: '100%',
+    height: 120,
+  },
+  categoryInfo: {
+    position: 'absolute',
     bottom: 0,
     left: 0,
-    position: 'absolute',
+    right: 0,
+    paddingHorizontal: 8,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+  },
+  categoryName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  categoryCount: {
+    fontSize: 12,
+    color: '#fff',
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  categoryEname: {
+    fontSize: 14,
+    color: '#fff',
+    fontStyle: 'italic',
+    opacity: 0.9,
+    textShadowColor: 'rgba(0, 0, 0, 0.8)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 16,
+    fontSize: 16,
+  },
+  errorContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 20,
+  },
+  errorText: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  retryButton: {
+    backgroundColor: '#007AFF',
+    paddingHorizontal: 20,
+    paddingVertical: 10,
+    borderRadius: 8,
+  },
+  retryButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
