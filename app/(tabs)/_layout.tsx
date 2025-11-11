@@ -26,7 +26,7 @@ export default function TabLayout() {
       <Tabs.Screen
         name="random"
         options={{
-          title: 'Random',
+          title: '随机',
           tabBarIcon: ({ color }) => <IconSymbol size={28} name="paperplane.fill" color={color} />,
         }}
       />

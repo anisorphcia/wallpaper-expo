@@ -1,7 +1,7 @@
 import { Image } from 'expo-image';
 import { useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { ActivityIndicator, Alert, FlatList, RefreshControl, StyleSheet, TouchableOpacity } from 'react-native';
+import { ActivityIndicator, Alert, FlatList, Platform, RefreshControl, StyleSheet, ToastAndroid, TouchableOpacity } from 'react-native';
 
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
@@ -123,7 +123,9 @@ export default function CategoryDetailScreen() {
       const result = await downloadOriginalImage(wallpaper.id);
 
       if (result.success) {
-        Alert.alert('下载成功', result.message);
+        if (Platform.OS === 'android') {
+          ToastAndroid.show(result.message, ToastAndroid.SHORT);
+        }
       } else {
         Alert.alert('下载失败', result.message);
       }
